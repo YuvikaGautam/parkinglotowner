@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "133064998924",
+    "project_id": "parkinglotowner-0",
+    "storage_bucket": "parkinglotowner-0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133064998924:android:0f66d098d8580e221d6e29",
+        "android_client_info": {
+          "package_name": "com.example.parkinglotowner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "133064998924-n53ai23al63rf6pabctc55sseqj8aa8p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmRIikGwxEf7eiplmyMKoi_B3tYONHj2I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "133064998924-n53ai23al63rf6pabctc55sseqj8aa8p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,151 +1,158 @@
-import 'dart:convert';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:parkinglotowner/providers/auth.dart';
-import 'package:parkinglotowner/providers/login.dart';
-import 'package:parkinglotowner/registerations/verification.dart';
+import 'package:parkinglotowner/screen/home.dart';
 import 'package:parkinglotowner/server/api.dart';
+import 'package:parkinglotowner/utilities/button.dart';
 import 'package:parkinglotowner/utilities/constant.dart';
 import 'package:provider/provider.dart';
 
-class DetailsEntry extends StatefulWidget {
-  const DetailsEntry({super.key});
+class Details extends StatefulWidget {
+  const Details({super.key});
 
   @override
-  State<DetailsEntry> createState() => _DetailsEntryState();
+  State<Details> createState() => _DetailsState();
 }
 
-generateID() {
-  String adminId = ("BMPS " +
-          DateTime.now().millisecondsSinceEpoch.hashCode.toString() +
-          "@@" +
-          FirebaseAuth.instance.currentUser!.uid)
-      .hashCode
-      .toString();
-}
-
-class _DetailsEntryState extends State<DetailsEntry> {
-  // int encoded = base64.encode(utf8.encode(adminId)).hashCode;
-
+class _DetailsState extends State<Details> {
   final _formKey = GlobalKey<FormState>();
-  final FName = TextEditingController();
-  final LName = TextEditingController();
-  final ParkingLotName = TextEditingController();
-  final ParkingLotAddress = TextEditingController();
-  final ParkingManagerName = TextEditingController();
-  final PhoneNumber = TextEditingController();
-  final CarSpace = TextEditingController();
-  final BikeSpace = TextEditingController();
-  Future<void> bookingid() async {
-    String adminId = ("BMPS " +
-            DateTime.now().millisecondsSinceEpoch.hashCode.toString() +
-            "@@" +
-            FirebaseAuth.instance.currentUser!.uid)
-        .hashCode
-        .toString();
-    int encoded = base64.encode(utf8.encode(adminId)).hashCode;
-    print(encoded);
-    await FirebaseFirestore.instance
-        .collection("admins")
-        .doc(FirebaseAuth.instance.currentUser!.uid)
-        .update({
-      "adminId": encoded,
-    });
-    bool result = await addAdmin(
-        encoded,
-        FName.text,
-        LName.text,
-        ParkingLotName.text,
-        ParkingLotAddress.text,
-        ParkingManagerName.text,
-        int.parse(PhoneNumber.text),
-        int.parse(CarSpace.text),
-        int.parse(BikeSpace.text));
+  final fName = TextEditingController();
+  final lName = TextEditingController();
+  final parkingLotName = TextEditingController();
+  final parkingLotAddress = TextEditingController();
+  final parkingManagerName = TextEditingController();
+  final phoneNumber = TextEditingController();
+  final carSpace = TextEditingController();
+  final bikeSpace = TextEditingController();
+  bool result = false;
 
-    if (result) {
-     await context.read<AuthProvider>().detailsEntered(encoded);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => Verification(encoded),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong'),
-        ),
-      );
-    }
+  Future<bool> addAdmin() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    result = await addAdminDetails(
+        authProvider.userId,
+        fName.text,
+        lName.text,
+        parkingLotName.text,
+        parkingLotAddress.text,
+        parkingManagerName.text,
+        int.parse(phoneNumber.text),
+        int.parse(carSpace.text),
+        int.parse(bikeSpace.text));
+    return result;
   }
 
   @override
   Widget build(BuildContext context) {
-    final Size size = MediaQuery.of(context).size;
     return Scaffold(
-        appBar: AppBar(
-          title: const Text("Details Entry"),
-          actions: [
-            IconButton(
-                onPressed: () async {
-                  const CircularProgressIndicator();
-                  await context.read<AuthProvider>().logout();
-                  SnackBar snackBar = const SnackBar(
-                    content: Text("Logged out successfully"),
-                  );
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => LoginPage(),
+      body: SafeArea(
+          minimum: const EdgeInsets.symmetric(horizontal: 31),
+          child: Padding(
+              padding: const EdgeInsets.only(top: 25.0),
+              child: SingleChildScrollView(
+                child: Column(children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Fill Your Profile',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.logout))
-          ],
-        ),
-        body: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.symmetric(
-              horizontal: size.width * mainBdPadHoriz,
-              vertical: size.width * mainBdPadVert,
-            ),
-            child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    buildFName(),
-                    buildLName(),
-                    buildParkingLotName(),
-                    buildParkingLotAddress(),
-                    buildParkingManagerName(),
-                    buildPhoneNumber(),
-                    buildCarSpace(),
-                    buildBikeSpace(),
-                    MaterialButton(
-                        minWidth: double.infinity,
-                        color: Colors.black,
-                        onPressed: (() {
-                          bool valid = _formKey.currentState!.validate();
-                          if (valid) {
-                            bookingid();
-                          } else {
-                            print('invalid');
-                          }
-                        }),
-                        child: const Text('Submit',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)))
-                  ],
-                ))));
+                  ),
+                  const SizedBox(
+                    height: 28,
+                  ),
+                  Column(
+                    children: [
+                       Center(
+                        child: CircleAvatar(
+                              radius: 50.0,
+                              backgroundColor: grey,
+                              child: const Icon(Icons.person,
+                                  size: 75,
+                                  color: Color.fromRGBO(255, 255, 255, 1)),
+                            ),
+                      ),
+                      const SizedBox(
+                        height: 28,
+                      ),
+                      Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: buildfName(),
+                                  ),
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                  Expanded(
+                                    child: buildlName(),
+                                  ),
+                                ],
+                              ),
+                              buildparkingLotName(),
+                              buildparkingLotAddress(),
+                              buildparkingManagerName(),
+                              buildphoneNumber(),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: buildcarSpace(),
+                                  ),
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                  Expanded(
+                                    child: buildbikeSpace(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(
+                                height: 28,
+                              ),
+                              CustomButton(
+                                onPressed: (() async {
+                                  bool valid =
+                                      _formKey.currentState!.validate();
+                                  if (valid) {
+                                    await addAdmin();
+                                    if (result) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Identity Verification Required')));
+                                      Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  HomeScreen()));
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Something went wrong')));
+                                    }
+                                  }
+                                }),
+                                text: 'Continue',
+                              ),
+                            ],
+                          ))
+                    ],
+                  )
+                ]),
+              ))),
+    );
   }
 
-  Widget buildFName() => Container(
-        margin: EdgeInsets.all(10),
+  Widget buildfName() => Container(
+        margin: const EdgeInsets.all(10),
         child: TextFormField(
-          controller: FName,
+          controller: fName,
           validator: (value) {
             if (value!.isEmpty) {
               return "First Name cannot be empty";
@@ -155,25 +162,13 @@ class _DetailsEntryState extends State<DetailsEntry> {
             }
             return null;
           },
-          style: const TextStyle(color: Colors.black),
-          decoration: const InputDecoration(
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            border:
-                OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            labelText: 'First Name',
-            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-          ),
+          decoration: getCustomDecoration('First Name'),
         ),
       );
-  Widget buildLName() => Container(
-        margin: EdgeInsets.all(10),
+  Widget buildlName() => Container(
+        margin: const EdgeInsets.all(10),
         child: TextFormField(
-          controller: LName,
+          controller: lName,
           validator: (value) {
             if (value!.isEmpty) {
               return "Last Name cannot be empty";
@@ -183,54 +178,29 @@ class _DetailsEntryState extends State<DetailsEntry> {
             }
             return null;
           },
-          style: const TextStyle(color: Colors.black),
-          decoration: const InputDecoration(
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            border:
-                OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            labelText: 'Last Name',
-            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-          ),
+          decoration: getCustomDecoration('Last Name'),
         ),
       );
-  Widget buildCarSpace() => Container(
-        margin: EdgeInsets.all(10),
+  Widget buildcarSpace() => Container(
+        margin: const EdgeInsets.all(10),
         child: TextFormField(
-          controller: CarSpace,
-          keyboardType: TextInputType.number,
-          validator: (value) {
-            if (value!.isEmpty) {
-              return "Car Space cannot be empty";
-            }
-            if (int.tryParse(value) == null) {
-              return "Car Space must be a number";
-            }
-            return null;
-          },
-          style: const TextStyle(color: Colors.black),
-          decoration: const InputDecoration(
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            border:
-                OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            labelText: 'Enter Car Space Available',
-            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-          ),
-        ),
+            controller: carSpace,
+            keyboardType: TextInputType.number,
+            validator: (value) {
+              if (value!.isEmpty) {
+                return "Car Space cannot be empty";
+              }
+              if (int.tryParse(value) == null) {
+                return "Car Space must be a number";
+              }
+              return null;
+            },
+            decoration: getCustomDecoration('Car')),
       );
-  Widget buildBikeSpace() => Container(
-        margin: EdgeInsets.all(10),
+  Widget buildbikeSpace() => Container(
+        margin: const EdgeInsets.all(10),
         child: TextFormField(
-          controller: BikeSpace,
+          controller: bikeSpace,
           keyboardType: TextInputType.number,
           validator: (value) {
             if (value!.isEmpty) {
@@ -241,25 +211,13 @@ class _DetailsEntryState extends State<DetailsEntry> {
             }
             return null;
           },
-          style: const TextStyle(color: Colors.black),
-          decoration: const InputDecoration(
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            border:
-                OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            labelText: 'Enter Bike Space Available',
-            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-          ),
+          decoration: getCustomDecoration('Bike'),
         ),
       );
-  Widget buildParkingManagerName() => Container(
-        margin: EdgeInsets.all(10),
+  Widget buildparkingManagerName() => Container(
+        margin: const EdgeInsets.all(10),
         child: TextFormField(
-          controller: ParkingManagerName,
+          controller: parkingManagerName,
           validator: (value) {
             if (value!.isEmpty) {
               return "Parking Manager Name cannot be empty";
@@ -269,25 +227,13 @@ class _DetailsEntryState extends State<DetailsEntry> {
             }
             return null;
           },
-          style: const TextStyle(color: Colors.black),
-          decoration: const InputDecoration(
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            border:
-                OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            labelText: 'Enter Parking Manager Name',
-            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-          ),
+          decoration: getCustomDecoration('Enter Parking Manager Name'),
         ),
       );
-  Widget buildPhoneNumber() => Container(
-        margin: EdgeInsets.all(10),
+  Widget buildphoneNumber() => Container(
+        margin: const EdgeInsets.all(10),
         child: TextFormField(
-          controller: PhoneNumber,
+          controller: phoneNumber,
           maxLength: 10,
           keyboardType: TextInputType.number,
           validator: (value) {
@@ -299,26 +245,13 @@ class _DetailsEntryState extends State<DetailsEntry> {
             }
             return null;
           },
-          style: const TextStyle(color: Colors.black),
-          decoration: const InputDecoration(
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            border:
-                OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            labelText: 'Enter Parking Lot Phone Number',
-            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-          ),
+          decoration: getCustomDecoration('Enter Parking Lot Phone Number'),
         ),
       );
-
-  Widget buildParkingLotName() => Container(
-        margin: EdgeInsets.all(10),
+  Widget buildparkingLotName() => Container(
+        margin: const EdgeInsets.all(10),
         child: TextFormField(
-          controller: ParkingLotName,
+          controller: parkingLotName,
           validator: (value) {
             if (value!.isEmpty) {
               return "ParkingLot Name cannot be empty";
@@ -328,25 +261,13 @@ class _DetailsEntryState extends State<DetailsEntry> {
             }
             return null;
           },
-          style: const TextStyle(color: Colors.black),
-          decoration: const InputDecoration(
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            border:
-                OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            labelText: 'Enter ParkingLot Name',
-            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-          ),
+          decoration: getCustomDecoration('Enter ParkingLot Name'),
         ),
       );
-  Widget buildParkingLotAddress() => Container(
-        margin: EdgeInsets.all(10),
+  Widget buildparkingLotAddress() => Container(
+        margin: const EdgeInsets.all(10),
         child: TextFormField(
-          controller: ParkingLotAddress,
+          controller: parkingLotAddress,
           validator: (value) {
             if (value!.isEmpty) {
               return "ParkingLot Address cannot be empty";
@@ -356,19 +277,7 @@ class _DetailsEntryState extends State<DetailsEntry> {
             }
             return null;
           },
-          style: const TextStyle(color: Colors.black),
-          decoration: const InputDecoration(
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.black),
-            ),
-            border:
-                OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-            labelText: 'Enter ParkingLot Address',
-            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-          ),
+          decoration: getCustomDecoration('Enter ParkingLot Address'),
         ),
       );
 }

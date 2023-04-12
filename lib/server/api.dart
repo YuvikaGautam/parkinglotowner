@@ -4,34 +4,32 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
 String adminBaseUrl =
-    "https://admin-details-bookmyslot.herokuapp.com/AdminDetails";
+    "https://bookingadmin-production.up.railway.app/AdminDetails";
 
-String imageUrl =
-    "https://verification-api-bookmyslot.herokuapp.com";
-Future<bool> addAdmin(
-  int encoded,
+String imageUrl = "https://verificationapi-production-626f.up.railway.app";
+
+Future<bool> addAdminDetails(
+  String ownerId,
   String fname,
   String lname,
-  String parkingLot,
+  String pLotName,
   String paddress,
-  String pname,
-  int pPhone,
+  String pManagerName,
+  int pPhNo,
   int carSpace,
   int bikeSpace,
 ) async {
   Map data = {
-    "placeId": encoded,
-    "fnameofowner": fname,
-    "lnameofowner": lname,
-    "parkingLot": parkingLot,
-    "address": paddress,
-    "parkingManager": pname,
-    "parkingPhNo": pPhone,
-    "carSpace": carSpace,
+    "ownerId": ownerId,
+    "fname": fname,
+    "lname": lname,
     "bikeSpace": bikeSpace,
-    "email": "email",
-    "password": "password",
-    "IsVerified": false,
+    "carSpace": carSpace,
+    "paddress": paddress,
+    "isVerified": false,
+    "pmanager": pManagerName,
+    "pphNo": pPhNo,
+    "plotName": pLotName
   };
   print(data);
   var response = await http.post(Uri.parse('$adminBaseUrl/AddAdminData'),
@@ -47,16 +45,18 @@ Future<bool> addAdmin(
   }
 }
 
-Future<bool> sendVerification(String image, int encoded) async {
+Future<bool> uploadImg(
+  String ownerId,
+  String img64,
+) async {
   Map data = {
-    "placeId": encoded,
-    "img64": image,
+    "details": {"img64": img64, "imguploadstatus": true}
   };
-  print(data);
-  var response = await http.post(Uri.parse('$imageUrl/AddDetails'),
+  // print(data);
+  var response = await http.put(Uri.parse('$adminBaseUrl/updatePhoto/$ownerId'),
       headers: {
         'Content-Type': 'application/json',
-      }, 
+      },
       body: json.encode(data));
   print(response.body);
   if (response.statusCode == 200) {
@@ -65,9 +65,84 @@ Future<bool> sendVerification(String image, int encoded) async {
     return false;
   }
 }
-Future<bool> checkVerification(String encoded) async {
+
+Future<bool> CheckActivestatus(String checkin) async {
+  String userId = checkin.split('&').toString();
+  var response = await http.get(Uri.parse('$adminBaseUrl/$userId/tickets'));
+  bool result = json.decode(utf8.decode(response.bodyBytes))['activeStatus'];
+  if (result) {
+    await checkIn(userId);
+  }
+  else{
+    await checkout(userId);
+  }
+  print(response.body);
+  if (response.statusCode == 200) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+Future<bool> checkIn(String userId) async {
+  // String userId = checkin.split('&').toString();
+  Map data = {
+    "tickets": {"checkinTime": DateTime.now().toString(), "activeStatus": true}
+  };
+
+  var response = await http.put(Uri.parse('$adminBaseUrl/Ticket/$userId'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: json.encode(data));
+  print(response.body);
+  if (response.statusCode == 200) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+Future<bool> checkout(String checkin) async {
+  String userId = checkin.split('&').toString();
+  Map data = {
+    "tickets": {"checkoutTime": DateTime.now().toString(), "activeStatus": true}
+  };
+
+  var response = await http.put(Uri.parse('$adminBaseUrl/Ticket/$userId'),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: json.encode(data));
+  print(response.body);
+  if (response.statusCode == 200) {
+    return true;
+  } else {
+    return false;
+  }
+}
+// Future<bool> sendVerification(String image, int encoded) async {
+//   Map data = {
+//     "placeId": encoded,
+//     "img64": image,
+//   };
+//   print(data);
+//   var response = await http.post(Uri.parse('$imageUrl/AddDetails'),
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: json.encode(data));
+//   print(response.body);
+//   if (response.statusCode == 200) {
+//     return true;
+//   } else {
+//     return false;
+//   }
+// }
+
+Future<bool> loadVerificationStatus(String ownerId) async {
   http.Response response =
-      await http.get(Uri.parse('$adminBaseUrl/GetAdminDetails/$encoded'));
+      await http.get(Uri.parse('$adminBaseUrl/GetAdminDetails/$ownerId'));
   if (response.statusCode == 200) {
     print(response.body);
     return json.decode(response.body)['isVerified'];
@@ -75,4 +150,3 @@ Future<bool> checkVerification(String encoded) async {
     return false;
   }
 }
-

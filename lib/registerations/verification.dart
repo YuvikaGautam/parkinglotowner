@@ -1,88 +1,106 @@
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:parkinglotowner/providers/auth.dart';
-import 'package:parkinglotowner/registerations/waiting.dart';
 import 'package:parkinglotowner/server/api.dart';
+import 'package:parkinglotowner/utilities/appBar.dart';
+import 'package:parkinglotowner/utilities/button.dart';
 import 'package:provider/provider.dart';
 
-class Verification extends StatefulWidget {
-  int encoded;
-  Verification(this.encoded, {super.key});
+class VerificationPage extends StatefulWidget {
+  VerificationPage({super.key});
 
   @override
-  State<Verification> createState() => _VerificationState();
+  _VerificationPageState createState() => _VerificationPageState();
 }
 
-class _VerificationState extends State<Verification> {
-  File? image;
+class _VerificationPageState extends State<VerificationPage> {
+  File? _image;
+  String imageString = '';
 
-  late String imageTemp2;
-  Future pickImageC() async {
+  Future _getImage() async {
     try {
-      final image = await ImagePicker()
-          .pickImage(source: ImageSource.camera, imageQuality: 75);
+      final pickedImage = await ImagePicker().getImage(
+        imageQuality: 75,
+        source: ImageSource.camera,
+      );
 
-      if (image == null) return;
+      if (pickedImage == null) return;
 
-      final imageTemp = File(image.path);
-      final bytes = File(image.path).readAsBytesSync();
-      imageTemp2 = const Base64Encoder().convert(bytes);
-      print(imageTemp2);
-      setState(() => this.image = imageTemp);
+      final imageTemp = File(pickedImage.path);
+      final bytes = File(pickedImage.path).readAsBytesSync();
+      imageString = const Base64Encoder().convert(bytes);
+      print(imageString);
+      setState(() {
+        _image = File(pickedImage.path);
+      });
     } on PlatformException catch (e) {
       print('Failed to pick image: $e');
+    }
+  }
+
+  Future<void> _submit() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    bool result = await uploadImg(authProvider.userId, imageString);
+    if (result) {
+      Future.delayed(const Duration(seconds: 3), () {
+        AuthProvider().underVerifyProcess = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Your verification is under review.'),
+          ),
+        );
+        Navigator.of(context).pop;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong'),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verification'),
-      ),
+      appBar: CustomAppBar(
+          title: 'Verification',
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
+          )),
       body: Center(
+          child: Padding(
+        padding: const EdgeInsets.all(10),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            MaterialButton(
-                color: Colors.black,
-                child: const Text("Capture Image from Camera",
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-                onPressed: () {
-                  pickImageC();
-                }),
-            image != null ? Image.file(image!) : Text("No image Captured"),
-            SizedBox(
-              height: 20,
+            _image != null
+                ? Image.file(
+                    _image!,
+                    // height: 200,
+                    // width: 200,
+                    fit: BoxFit.cover,
+                  )
+                : const Icon(Icons.camera_alt, size: 100),
+            const SizedBox(height: 20),
+            CustomButton(
+              onPressed: _getImage,
+              text: 'Take a picture',
             ),
-            IconButton(
-              onPressed: () {
-                image != null
-                    ? sendVerification(imageTemp2, widget.encoded)
-                        .then((value) async {
-                        if (value == true) {
-                          // await context.read<AuthProvider>().imageSubmitted();
-                          // await context.read<AuthProvider>().;
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const Waiting(),
-                            ),
-                          );
-                        }
-                      })
-                    : Text("No image Captured");
-              },
-              icon: Icon(Icons.upload_file),
-              color: Colors.black,
-            )
+            const SizedBox(height: 20),
+            CustomButton(
+              onPressed: _image == null ? null : _submit,
+              text: 'Submit',
+            ),
           ],
         ),
-      ),
+      )),
     );
   }
 }

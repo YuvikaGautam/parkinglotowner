@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:parkinglotowner/server/api.dart';
 import 'package:parkinglotowner/utilities/appBar.dart';
 import 'package:parkinglotowner/utilities/button.dart';
 import 'package:parkinglotowner/utilities/constant.dart';
@@ -16,16 +19,36 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _uniqueCodeController = TextEditingController();
   String uniqueCode = '';
+  String checkoutId = '';
+  Future<void> generateIds() async {
+    String id1 = "";
+
+    var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    var charLength = chars.length;
+    for (var i = 0; i < 14; i++) {
+      id1 += chars[Random().nextInt(charLength)];
+    }
+    checkoutId = id1;
+  }
 
   Future<void> _scanQRCode() async {
     String result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => Scanner()),
     );
+    await generateIds();
+    await updateTicketStatusUser(result, checkoutId);
     setState(() {
       uniqueCode = result;
       print('uniqueCode: $uniqueCode');
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // getAllTickets("qwe");
   }
 
   @override
@@ -49,89 +72,104 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         body: RefreshIndicator(
-          onRefresh: () {
-            return Future.delayed(const Duration(seconds: 2), () {
-              setState(() {});
-            });
-          },
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-                ListView(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            onRefresh: () {
+              return Future.delayed(const Duration(seconds: 2), () {
+                setState(() {});
+              });
+            },
+            child: FutureBuilder(
+              future: Future.wait(
+                  [getAvailibiltySpace("qwe"), getAllTickets("qwe")]),
+              builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
+                if (snapshot.hasData) {
+                  final ticketDetails = snapshot.data![1];
+                  final availibiltySpace = snapshot.data![0];
+                  return SingleChildScrollView(
+                    child: Column(
                       children: [
-                        _buildSlotCard('Car'),
-                        _buildSlotCard('Bike'),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Check In / Check Out Users',
+                        const SizedBox(height: 16),
+                        ListView(
+                          shrinkWrap: true,
+                          physics: BouncingScrollPhysics(),
+                          // physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildSlotCard(
+                                    'Car', availibiltySpace['carSpace']),
+                                _buildSlotCard(
+                                    'Bike', availibiltySpace['bikeSpace']),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Check In / Check Out Users',
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text('Scan QR Code',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey,
+                                      )),
+                                  const SizedBox(
+                                    height: 16.0,
+                                  ),
+                                  CustomButton(
+                                    onPressed: () async {
+                                      await _scanQRCode();
+                                    },
+                                    text: 'QR Code Scanner',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text('Active Bookings',
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Text('Scan QR Code',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
-                              )),
-                          const SizedBox(
-                            height: 16.0,
-                          ),
-                          CustomButton(
-                            onPressed: () async {
-                              await _scanQRCode();
-                            },
-                            text: 'QR Code Scanner',
-                          ),
-                        ],
-                      ),
+                            )),
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: ticketDetails.length,
+                          itemBuilder: (context, index) {
+                            return _buildBookingCard(
+                              userName: ticketDetails[index]["vehicleNumber"],
+
+                              // vehicleType: 'Car',
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text('Active Bookings',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    )),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: 10,
-                  itemBuilder: (context, index) {
-                    return _buildBookingCard(
-                      userName: 'DL 8CW 432$index',
-                      parkingTime: '12:00 PM',
-                      checkoutTime: '1:00 PM',
-                      vehicleType: 'Car',
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ));
+                  );
+                } else {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+              },
+            )));
   }
 
-  Widget _buildSlotCard(String vehicleType) {
+  Widget _buildSlotCard(String vehicleType, int Space) {
     // Replace with actual implementation of slot card
     return Container(
         width: 100,
@@ -149,17 +187,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     size: 75,
                   ),
             vehicleType == 'Car'
-                ? const Text('Avalabilty : 10')
-                : const Text('Avalabilty : 5')
+                ? Text('Avalabilty : $Space')
+                : Text('Avalabilty : $Space')
           ],
         ));
   }
 
   Widget _buildBookingCard({
     required String userName,
-    required String parkingTime,
-    required String checkoutTime,
-    required String vehicleType,
+    // required String parkingTime,
+    // required String checkoutTime,
+    // required String vehicleType,
   }) {
     return Card(
       elevation: 2,
@@ -179,37 +217,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  "Check In Time :$parkingTime",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                ),
-                Text(
-                  "Estimated Check out Time :$checkoutTime",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                ),
+                // Text(
+                //   "Check In Time :$parkingTime",
+                //   style: const TextStyle(
+                //     fontSize: 16,
+                //     color: Colors.grey,
+                //   ),
+                // ),
+                // Text(
+                //   "Estimated Check out Time :$checkoutTime",
+                //   style: const TextStyle(
+                //     fontSize: 16,
+                //     color: Colors.grey,
+                //   ),
+                // ),
               ],
             ),
-            const Spacer(),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  vehicleType,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const SizedBox(height: 8),
-              ],
-            ),
+            // const Spacer(),
+            // Column(
+            //   crossAxisAlignment: CrossAxisAlignment.end,
+            //   children: [
+            //     Text(
+            //       vehicleType,
+            //       style: const TextStyle(
+            //         fontSize: 18,
+            //         fontWeight: FontWeight.bold,
+            //       ),
+            //     ),
+            //     const SizedBox(height: 8),
+            //     const SizedBox(height: 8),
+            //   ],
+            // ),
           ],
         ),
       ),

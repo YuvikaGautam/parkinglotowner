@@ -55,24 +55,51 @@ class _ScannerState extends State<Scanner> {
       onPermissionSet: (ctrl, p) => _onPermissionSet(context, ctrl, p),
     );
   }
+// Widget _buildQrView(BuildContext context) {
+//   var scanArea = (MediaQuery.of(context).size.width < 400 || MediaQuery.of(context).size.height < 400)
+//       ? 150.0
+//       : 300.0;
+//   return Container(
+//     color: Colors.white,
+//     child: Center(
+//       child: SizedBox(
+//         width: scanArea,
+//         height: scanArea,
+//         child: QRView(
+//           key: qrKey,
+//           onQRViewCreated: _onQRViewCreated,
+//           overlay: QrScannerOverlayShape(
+//             borderColor: Colors.red,
+//             borderRadius: 10,
+//             borderLength: 30,
+//             borderWidth: 10,
+//             cutOutSize: scanArea,
+//           ),
+//           onPermissionSet: (ctrl, p) => _onPermissionSet(context, ctrl, p),
+//         ),
+//       ),
+//     ),
+//   );
+// }
 
-  void _onQRViewCreated(QRViewController controller) {
-    setState(() {
-      this.controller = controller;
-    });
-    bool scanned = false;
-    controller.scannedDataStream.listen((scanData) {
-      if (!scanned) {
-        setState(() async {
-          result = scanData;
-          await checkIn(result!.code.toString());
-        });
-        scanned = true;
-        controller.pauseCamera();
-        Navigator.of(context).pop(result!.code);
-      }
-    });
-  }
+void _onQRViewCreated(QRViewController controller) async {
+  setState(() {
+    this.controller = controller;
+  });
+  bool scanned = false;
+  controller.scannedDataStream.listen((scanData) async {
+    if (!scanned) {
+      setState(() {
+        result = scanData;
+      });
+      scanned = true;
+      controller.pauseCamera();
+      await checkIn(result!.code.toString());
+      Navigator.of(context).pop(result!.code);
+    }
+  });
+}
+
 
   void _onPermissionSet(BuildContext context, QRViewController ctrl, bool p) {
     log('${DateTime.now().toIso8601String()}_onPermissionSet $p');
